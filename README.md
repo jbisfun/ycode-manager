@@ -10,6 +10,7 @@ moves it back. "Reload hooks" applies the changes and reopens the manager.
 
 ## Install
 
-    ln -s ~/jbisfun/ycode-manager ~/.config/zed/hooks/ycode-manager
+    # from the ycode-manager clone
+    ln -s "$PWD" ~/.config/zed/hooks/ycode-manager
 
 then "ycode: reload hooks". Needs ycode with `ycode.status_button`.
