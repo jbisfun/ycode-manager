@@ -1,11 +1,11 @@
 -- ycode-manager: list every Lua mod in the hooks directory and enable/disable them.
 --
 -- A status bar button (and "manager: open" in the command palette) opens the manager.
--- Mods are the hook files (`*.lua`, `*.x.lua`) and extension directories in
--- ~/.config/zed/hooks. Disabling moves one into hooks/.disabled/ (the loader skips
+-- Mods are the hook files (`*.lua`, `*.x.lua`) and extension directories in ycode's
+-- hooks directory (`ycode.hooks_dir`). Disabling moves one into hooks/.disabled/ (the loader skips
 -- dot-directories); enabling moves it back. Changes apply with a hook reload.
 
-local HOOKS = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/zed/hooks"
+local HOOKS = ycode.hooks_dir
 local DISABLED = HOOKS .. "/.disabled"
 local SELF = "ycode-manager"
 local REOPEN_KEY = "ycode-manager-reopen"
