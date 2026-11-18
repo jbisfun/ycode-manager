@@ -109,24 +109,13 @@ end
 
 local function row(w, mod)
     local st = w.state
-    local kind = mod.dir and "extension" or "file"
-    local icon_name = mod.dir and "folder" or "file-code"
-
-    local info = { "col", grow = true, gap = 2,
-        { "text", mod.name, bold = true, fg = mod.enabled and "text" or "muted" },
-    }
-    if mod.desc ~= "" then
-        info[#info + 1] = { "text", mod.desc, size = "small", fg = "muted" }
-    end
-    info[#info + 1] = { "text", mod.target and ("→ " .. mod.target) or kind,
-        size = "xsmall", mono = true, fg = "muted" }
-
-    local end_slot
+    local detail = mod.desc ~= "" and mod.desc or (mod.target and ("→ " .. mod.target))
+        or (mod.dir and "extension" or "file")
+    local toggle
     if mod.name == SELF then
-        end_slot = { "text", "this manager", size = "small", fg = "muted" }
+        toggle = { "text", "this manager", size = "small", color = "muted" }
     else
-        end_slot = { "checkbox", id = "toggle-" .. mod.name,
-            checked = mod.enabled, label = mod.enabled and "Enabled" or "Disabled",
+        toggle = { "checkbox", id = "toggle-" .. mod.name, checked = mod.enabled,
             on_click = function(w)
                 local ok, err = move(mod, not mod.enabled)
                 if ok then
@@ -139,13 +128,12 @@ local function row(w, mod)
                 st.mods = scan()
             end }
     end
-
-    return { "list_item", id = "mod-" .. mod.name,
-        start = { "icon", name = icon_name, size = "small",
-            color = mod.enabled and "text" or "muted" },
-        end_ = end_slot,
-        info,
-    }
+    return { "list_item", mod.name, id = "mod-" .. mod.name, detail = detail,
+        color = mod.enabled and "default" or "muted",
+        tooltip = mod.target or mod.path,
+        start = { "icon", name = mod.dir and "folder" or "file_code",
+                  color = mod.enabled and "default" or "muted" },
+        end_ = toggle }
 end
 
 local function render(w)
@@ -153,26 +141,18 @@ local function render(w)
     st.mods = st.mods or scan()
     local enabled = 0
     for _, m in ipairs(st.mods) do if m.enabled then enabled = enabled + 1 end end
-    local list = { "col", id = "mods", scroll = true, grow = true, gap = 0 }
-    for _, m in ipairs(st.mods) do list[#list + 1] = row(w, m) end
-    if #st.mods == 0 then list[#list + 1] = { "text", "no mods in " .. HOOKS, fg = "muted" } end
-    return { "col", w = "full", h = "full",
-        { "panel_header", title = "Mods", context = enabled .. "/" .. #st.mods .. " enabled",
-            { "icon_button", icon = "rotate-ccw", tooltip = "Refresh mod list",
+    local mods = { "section", HOOKS, empty = "no mods" }
+    for _, m in ipairs(st.mods) do mods[#mods + 1] = row(w, m) end
+    return { "panel", id = "mods",
+        header = { title = "Mods", context = enabled .. "/" .. #st.mods .. " enabled", actions = {
+            { "icon_button", icon = "rotate_ccw", tooltip = "Rescan mods",
               on_click = function(w) st.mods = scan() end },
             { "button", st.dirty and "Reload to apply" or "Reload hooks",
-              icon = "rotate-cw", style = st.dirty and "filled" or "subtle",
+              style = st.dirty and "filled" or "subtle",
               tooltip = "Reload hooks so enable/disable changes take effect",
-              on_click = function(w) apply() end },
-        },
-        { "col", grow = true, p = 14, gap = 10,
-            { "text", HOOKS, mono = true, size = "xsmall", fg = "muted" },
-            list,
-            { "divider" },
-            { "text", st.message or "", size = "small",
-              fg = st.dirty and "warning" or "muted" },
-        },
-    }
+              on_click = function(w) apply() end } } },
+        footer = st.message, color = st.dirty and "warning" or nil,
+        mods }
 end
 
 local function open()
@@ -182,7 +162,7 @@ local function open()
         render = function(w)
             local ok, tree = pcall(render, w)
             if ok then return tree end
-            return { "text", "ycode-manager: " .. tostring(tree), fg = "error" }
+            return { "empty", "ycode-manager: " .. tostring(tree), color = "error" }
         end,
     }
 end
