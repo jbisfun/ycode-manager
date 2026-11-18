@@ -110,36 +110,42 @@ end
 local function row(w, mod)
     local st = w.state
     local kind = mod.dir and "extension" or "file"
+    local icon_name = mod.dir and "folder" or "file-code"
+
     local info = { "col", grow = true, gap = 2,
-        { "row", gap = 8,
-            { "text", mod.name, bold = true, fg = mod.enabled and "text" or "muted" },
-            { "text", mod.enabled and "enabled" or "disabled", size = 12,
-              fg = mod.enabled and "success" or "muted" },
-        },
+        { "text", mod.name, bold = true, fg = mod.enabled and "text" or "muted" },
     }
     if mod.desc ~= "" then
-        info[#info + 1] = { "text", mod.desc, size = 12, fg = "muted" }
+        info[#info + 1] = { "text", mod.desc, size = "small", fg = "muted" }
     end
     info[#info + 1] = { "text", mod.target and ("→ " .. mod.target) or kind,
-        size = 11, mono = true, fg = "muted" }
+        size = "xsmall", mono = true, fg = "muted" }
 
-    local action
+    local end_slot
     if mod.name == SELF then
-        action = { "text", "this manager", size = 12, fg = "muted" }
+        end_slot = { "text", "this manager", size = "small", fg = "muted" }
     else
-        action = { "button", mod.enabled and "Disable" or "Enable", on_click = function(w)
-            local ok, err = move(mod, not mod.enabled)
-            if ok then
-                st.dirty = true
-                st.message = (mod.enabled and "disabled " or "enabled ") .. mod.name
-                    .. "; reload to apply"
-            else
-                st.message = "could not move " .. mod.name .. ": " .. tostring(err)
-            end
-            st.mods = scan()
-        end }
+        end_slot = { "checkbox", id = "toggle-" .. mod.name,
+            checked = mod.enabled, label = mod.enabled and "Enabled" or "Disabled",
+            on_click = function(w)
+                local ok, err = move(mod, not mod.enabled)
+                if ok then
+                    st.dirty = true
+                    st.message = (mod.enabled and "disabled " or "enabled ") .. mod.name
+                        .. "; reload to apply"
+                else
+                    st.message = "could not move " .. mod.name .. ": " .. tostring(err)
+                end
+                st.mods = scan()
+            end }
     end
-    return { "row", gap = 10, p = 8, align = "center", rounded = 6, bg = "surface", info, action }
+
+    return { "list_item", id = "mod-" .. mod.name,
+        start = { "icon", name = icon_name, size = "small",
+            color = mod.enabled and "text" or "muted" },
+        end_ = end_slot,
+        info,
+    }
 end
 
 local function render(w)
@@ -147,22 +153,24 @@ local function render(w)
     st.mods = st.mods or scan()
     local enabled = 0
     for _, m in ipairs(st.mods) do if m.enabled then enabled = enabled + 1 end end
-    local list = { "col", id = "mods", scroll = true, grow = true, gap = 6 }
+    local list = { "col", id = "mods", scroll = true, grow = true, gap = 0 }
     for _, m in ipairs(st.mods) do list[#list + 1] = row(w, m) end
     if #st.mods == 0 then list[#list + 1] = { "text", "no mods in " .. HOOKS, fg = "muted" } end
-    return { "col", w = "full", h = "full", p = 14, gap = 10,
-        { "row", gap = 8, align = "center",
-            { "text", "Mods", bold = true, size = 16, grow = true },
-            { "text", enabled .. "/" .. #st.mods .. " enabled", fg = "muted" },
-        },
-        { "text", HOOKS, mono = true, size = 11, fg = "muted" },
-        list,
-        { "row", gap = 8, align = "center",
-            { "text", st.message or "", size = 12, grow = true,
-              fg = st.dirty and "warning" or "muted" },
-            { "button", "Refresh", on_click = function(w) st.mods = scan() end },
-            { "button", st.dirty and "Reload hooks to apply" or "Reload hooks",
+    return { "col", w = "full", h = "full",
+        { "panel_header", title = "Mods", context = enabled .. "/" .. #st.mods .. " enabled",
+            { "icon_button", icon = "rotate-ccw", tooltip = "Refresh mod list",
+              on_click = function(w) st.mods = scan() end },
+            { "button", st.dirty and "Reload to apply" or "Reload hooks",
+              icon = "rotate-cw", style = st.dirty and "filled" or "subtle",
+              tooltip = "Reload hooks so enable/disable changes take effect",
               on_click = function(w) apply() end },
+        },
+        { "col", grow = true, p = 14, gap = 10,
+            { "text", HOOKS, mono = true, size = "xsmall", fg = "muted" },
+            list,
+            { "divider" },
+            { "text", st.message or "", size = "small",
+              fg = st.dirty and "warning" or "muted" },
         },
     }
 end
